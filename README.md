@@ -1,33 +1,42 @@
 # PCAP Analyzer
 
-Small learning project for analyzing PCAP files and marking simple suspicious traffic.
+Small Python project for practicing PCAP analysis and finding simple suspicious activity.
 
-## What it does
+## What the script does
 
 - reads packets from a PCAP file
-- extracts basic network data:
+- extracts basic info:
   - source IP
   - destination IP
   - source port
   - destination port
   - protocol
-- applies a few simple detection rules
-- saves the result to JSON
+- creates simple SOC-like events
+- saves results to JSON
+- prints console messages like `[INFO]`, `[WARNING]`, and `[ALERT]`
 
-## Detection rules
+## Detection ideas
 
-1. DNS
-   - count how often each requested domain appears
-   - if a domain is requested many times, mark it as suspicious
-   - if it appears much more than the threshold, mark it as highly suspicious
+### DNS
 
-2. HTTP
-   - look for HTTP requests where an IP address is used instead of a domain name
-   - mark those requests as suspicious
+- count how often domains are requested
+- check if one domain is requested many times in a short time window
+- do a simple periodicity check for repeated DNS requests
 
-3. Ports
-   - look for traffic that uses ports outside a small list of common service ports
-   - mark those connections as suspicious
+### HTTP
+
+- detect HTTP requests that use an IP address instead of a domain name
+
+### Ports
+
+- flag connections that use uncommon ports
+
+### Correlation
+
+- check if a host resolves a domain in DNS
+- then see if the same host connects to the resolved IP shortly after
+
+This logic is intentionally simple. It is not a real SOC product, but it is good for practice.
 
 ## Install
 
@@ -41,31 +50,47 @@ py -m pip install -r requirements.txt
 py pcap_analyzer.py sample.pcap -o results.json
 ```
 
-Optional DNS threshold:
+Optional settings:
 
 ```powershell
-py pcap_analyzer.py sample.pcap -o results.json --dns-threshold 10
+py pcap_analyzer.py sample.pcap -o results.json --dns-burst-count 5 --dns-window 10 --correlation-window 5
 ```
 
-## Output
+## JSON output
 
-The JSON file contains:
+The output file contains:
 
-- `summary` with packet counts and top DNS domains
-- `findings` with suspicious or highly suspicious packets
-- `packets` with all parsed IP packets
+- `summary`
+- `events`
+- `packets`
 
-Each packet record includes fields like:
+Each event includes fields like:
 
 - `src_ip`
 - `dst_ip`
-- `src_port`
-- `dst_port`
 - `port`
 - `protocol`
-- `classification`
+- `event_type`
+- `severity`
 - `reason`
+
+Severity values:
+
+- `low`
+- `medium`
+- `high`
+
+Example event types:
+
+- `dns_burst`
+- `dns_periodic`
+- `http_ip_destination`
+- `uncommon_port`
+- `dns_ip_correlation`
 
 ## Notes
 
-This project uses very simple rules, so false positives are normal. That is fine for a practice project because the goal is to understand the analysis process, not to build a real SOC product.
+- the rules are simple on purpose
+- false positives are normal
+- comments in the code are short and practical
+- the goal is to understand traffic analysis, not build something advanced
